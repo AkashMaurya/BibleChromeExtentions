@@ -133,7 +133,7 @@ const DOM = {
   testamentSelect: $('testament-select'),
   bookSelect: $('book-select'),
   chapterSelect: $('chapter-select'),
-  
+
   // Verses
   versesSection: $('verses-section'),
   versesTitle: $('verses-title'),
@@ -141,12 +141,16 @@ const DOM = {
   selectAllBtn: $('select-all-btn'),
   clearAllBtn: $('clear-all-btn'),
   copySelectedBtn: $('copy-selected-btn'),
-  
+
+  // Copied Card
+  copiedCardSection: $('copied-card-section'),
+  copiedCard: $('copied-card'),
+
   // History
   historySection: $('history-section'),
   historyList: $('history-list'),
   clearHistoryBtn: $('clear-history-btn'),
-  
+
   // Controls
   themeToggle: $('theme-toggle'),
   autoCopyTgl: $('auto-copy-toggle'),
@@ -412,8 +416,12 @@ async function showVerses(bookNumber, chapter) {
 
 function renderVersesList(verses, chapter) {
   DOM.versesList.innerHTML = '';
+  DOM.copiedCardSection.hidden = true;
 
   console.log('📖 Rendering verses, total:', verses.length);
+
+  // Store verses for later use
+  state.currentVersesData = verses;
 
   // Get book name for reference
   const testament = state.currentBook <= 39 ? 'old' : 'new';
@@ -433,33 +441,55 @@ function renderVersesList(verses, chapter) {
 
     console.log('📖 Verse:', verseNum, '-', text.substring(0, 20));
 
-    // Create card with reference above and text below
-    const card = document.createElement('div');
-    card.className = 'verse-card';
-    card.dataset.verse = verseNum;
-    card.dataset.vid = verseid;
+    // Create verse item with reference and text
+    const verseItem = document.createElement('div');
+    verseItem.className = 'verse-item-card';
+    verseItem.dataset.verse = verseNum;
+    verseItem.dataset.vid = verseid;
 
-    card.innerHTML = `
-      <span class="verse-ref">† ${bookName} ${chapter}:${verseNum} †</span>
-      <span class="verse-text">${text}</span>
+    verseItem.innerHTML = `
+      <div class="verse-ref">† ${bookName} ${chapter}:${verseNum} †</div>
+      <div class="verse-text">${text}</div>
     `;
 
-    card.addEventListener('click', () => {
+    verseItem.addEventListener('click', () => {
       if (state.selectedVerses.has(verseNum)) {
         state.selectedVerses.delete(verseNum);
-        card.classList.remove('selected');
+        verseItem.classList.remove('selected');
       } else {
         state.selectedVerses.add(verseNum);
-        card.classList.add('selected');
+        verseItem.classList.add('selected');
       }
       updateCopyButton();
       copySelectedVerses();
     });
-    
-    DOM.versesList.appendChild(card);
+
+    DOM.versesList.appendChild(verseItem);
   });
 
   DOM.versesSection.hidden = false;
+}
+
+function showCopiedCard(versesData, selectedVerseNums, chapter, bookInfo, bookName) {
+  const selectedVerses = versesData.filter(v => {
+    const verseNum = (v.Verseid || v.verse) % 1000;
+    return selectedVerseNums.has(verseNum);
+  });
+
+  if (selectedVerses.length === 0) {
+    DOM.copiedCardSection.hidden = true;
+    return;
+  }
+
+  const crossSymbol = '†';
+  const versesContent = selectedVerses.map(v => {
+    const verseNum = (v.Verseid || v.verse) % 1000;
+    const text = v.Verse || v.text || '';
+    return `${crossSymbol} ${bookName} ${chapter}:${verseNum} ${crossSymbol} — ${text}`;
+  }).join('\n\n');
+
+  DOM.copiedCard.innerHTML = `<div class="copied-verse-text">${versesContent.replace(/\n/g, '<br>')}</div>`;
+  DOM.copiedCardSection.hidden = false;
 }
 
 function updateCopyButton() {
@@ -471,20 +501,22 @@ function updateCopyButton() {
 }
 
 function selectAllVerses() {
-  const cards = DOM.versesList.querySelectorAll('.verse-card');
-  cards.forEach(card => {
-    state.selectedVerses.add(parseInt(card.dataset.verse));
-    card.classList.add('selected');
+  const items = DOM.versesList.querySelectorAll('.verse-item-card');
+  items.forEach(item => {
+    state.selectedVerses.add(parseInt(item.dataset.verse));
+    item.classList.add('selected');
   });
   updateCopyButton();
+  copySelectedVerses();
 }
 
 function clearAllVerses() {
-  const cards = DOM.versesList.querySelectorAll('.verse-card');
-  cards.forEach(card => {
-    card.classList.remove('selected');
+  const items = DOM.versesList.querySelectorAll('.verse-item-card');
+  items.forEach(item => {
+    item.classList.remove('selected');
   });
   state.selectedVerses.clear();
+  DOM.copiedCardSection.hidden = true;
   updateCopyButton();
 }
 
@@ -508,7 +540,7 @@ async function copySelectedVerses() {
       const text = v.Verse || v.text || '';
       // Use language-specific book name
       const bookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
-      lines.push(`${bookName} ${state.currentChapter}:${verseNum} — ${text}`);
+      lines.push(`† ${bookName} ${state.currentChapter}:${verseNum} † — ${text}`);
     }
   });
 
@@ -518,8 +550,11 @@ async function copySelectedVerses() {
     await navigator.clipboard.writeText(clipboardText);
     flashBadge();
 
-    // Use language-specific reference for history
+    // Show copied card with selected verses
     const bookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
+    showCopiedCard(state.currentVerses, state.selectedVerses, state.currentChapter, bookInfo, bookName);
+
+    // Use language-specific reference for history
     const refLabel = state.language === 'english' ? 'verses' : 'आयतें';
     const historyRef = `${bookName} ${state.currentChapter} (${state.selectedVerses.size} ${refLabel})`;
     addToHistory(`${state.currentBook}:${state.currentChapter}`, historyRef);

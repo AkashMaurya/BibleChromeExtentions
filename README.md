@@ -5,6 +5,8 @@ A simple Chrome extension for instant Hindi Bible verse lookup. Perfect for chur
 ## Features
 
 - **Hindi BSI Version** - Complete Hindi Bible with accurate translations
+- **English TLV Version** - Complete English Bible (TLV - Tree of Life Version)
+- **Dual Language** - Switch between Hindi and English instantly
 - **Easy Navigation** - Select Testament → Book → Chapter → Verses
 - **One-Click Copy** - Copy selected verses to clipboard instantly
 - **Dark/Light Theme** - Toggle between themes for comfortable reading
@@ -69,6 +71,10 @@ Click the moon/sun icon in the header to switch between dark and light themes. Y
 
 ---
 
-**Made with ♥ by JESUS SHEEP AKASH**
+**Bible Versions Used:**
+- **Hindi:** BSI (Bible Society of India) Version
+- **English:** TLV (Tree of Life Version)
 
-Version 2.1.0 | Hindi BSI Version
+**Made with ♥ by Jesus Sheep Akash**
+
+Version 2.3.0 | BSI Hindi + TLV English

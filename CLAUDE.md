@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Bible Flow is a Chrome Extension (Manifest V3) that provides instant Hindi Bible verse lookup through a dropdown selector interface. Users select Testament → Book → Chapter → Verses, then copy selected verses to clipboard.
+Bible Flow is a Chrome Extension (Manifest V3) that provides instant Hindi and English Bible verse lookup through a dropdown selector interface. Users select Testament → Book → Chapter → Verses, then copy selected verses to clipboard.
+
+## Bible Versions
+
+- **Hindi:** BSI (Bible Society of India) Version
+- **English:** TLV (Tree of Life Version)
 
 ## Running the Extension
 

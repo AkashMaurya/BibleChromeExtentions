@@ -607,43 +607,149 @@ body::-webkit-scrollbar-thumb {
   border-radius: 10px;
 }
 
-/* Verse Card Design */
-.verse-card {
+/* Verse Item Card (with reference and text) */
+.verse-item-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 14px 16px;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 12px;
   cursor: pointer;
-  transition: var(--transition);
-  font-size: 14px;
-  line-height: 1.7;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.verse-card:hover {
-  background: var(--accent-glow);
+.verse-item-card:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.04) 100%);
   border-color: var(--accent);
   transform: translateY(-2px);
 }
 
+.verse-item-card.selected {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border-color: var(--accent);
+  border-left: 3px solid var(--accent);
+}
+
+.verse-item-card .verse-ref {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.verse-item-card .verse-text {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-1);
+  word-break: break-word;
+}
+
+/* Copied Card Section */
+.copied-card-section {
+  margin-top: var(--sp-lg);
+  padding: var(--sp-lg);
+}
+
+.copied-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.04) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.copied-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent), rgba(245, 158, 11, 0.5), var(--accent));
+}
+
+.copied-verse-text {
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.8;
+  word-break: break-word;
+}
+
+/* Verse Card Design */
+.verse-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
+  line-height: 1.7;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.verse-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.verse-card:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.2);
+}
+
+.verse-card:hover::before {
+  opacity: 1;
+}
+
 .verse-card.selected {
-  background: rgba(245, 158, 11, 0.12);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
   border-left: 4px solid var(--accent);
+  border-color: var(--accent);
 }
 
 .verse-card .verse-ref {
-  font-size: 12px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--accent);
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   text-align: center;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 20px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .verse-card .verse-text {
   color: var(--text-1);
   word-break: break-word;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.8;
 }
 
 .verse-item {
