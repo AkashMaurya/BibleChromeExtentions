@@ -412,46 +412,53 @@ async function showVerses(bookNumber, chapter) {
 
 function renderVersesList(verses, chapter) {
   DOM.versesList.innerHTML = '';
-  
+
   console.log('📖 Rendering verses, total:', verses.length);
-  
+
+  // Get book name for reference
+  const testament = state.currentBook <= 39 ? 'old' : 'new';
+  const books = BOOKS_BY_TESTAMENT[testament];
+  const bookInfo = books.find(b => b.number === state.currentBook);
+  const bookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
+
   verses.forEach((v) => {
     const verseid = v.Verseid || v.verse;
     const text = v.Verse || v.text || '';
-    
+
     // Extract verse number from verseid (format: BBCCVVV)
-    // Example: 50004001 = book 50, chapter 4, verse 1
     const verseNum = verseid % 1000;
-    
-    // Skip verse 0 (intro/heading) - it doesn't exist in actual Bible
+
+    // Skip verse 0 (intro/heading)
     if (verseNum === 0) return;
-    
+
     console.log('📖 Verse:', verseNum, '-', text.substring(0, 20));
-    
-    const item = document.createElement('label');
-    item.className = 'verse-item';
-    item.innerHTML = `
-      <input type="checkbox" data-verse="${verseNum}" data-vid="${verseid}">
-      <span class="verse-number">${verseNum}</span>
+
+    // Create card with reference above and text below
+    const card = document.createElement('div');
+    card.className = 'verse-card';
+    card.dataset.verse = verseNum;
+    card.dataset.vid = verseid;
+
+    card.innerHTML = `
+      <span class="verse-ref">† ${bookName} ${chapter}:${verseNum} †</span>
       <span class="verse-text">${text}</span>
     `;
-    
-    const checkbox = item.querySelector('input');
-    checkbox.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        state.selectedVerses.add(verseNum);
-        item.classList.add('selected');
-      } else {
+
+    card.addEventListener('click', () => {
+      if (state.selectedVerses.has(verseNum)) {
         state.selectedVerses.delete(verseNum);
-        item.classList.remove('selected');
+        card.classList.remove('selected');
+      } else {
+        state.selectedVerses.add(verseNum);
+        card.classList.add('selected');
       }
       updateCopyButton();
       copySelectedVerses();
     });
     
-    DOM.versesList.appendChild(item);
+    DOM.versesList.appendChild(card);
   });
-  
+
   DOM.versesSection.hidden = false;
 }
 
@@ -464,20 +471,18 @@ function updateCopyButton() {
 }
 
 function selectAllVerses() {
-  const checkboxes = DOM.versesList.querySelectorAll('input[type="checkbox"]');
-  checkboxes.forEach(cb => {
-    cb.checked = true;
-    state.selectedVerses.add(parseInt(cb.dataset.verse));
-    cb.closest('.verse-item').classList.add('selected');
+  const cards = DOM.versesList.querySelectorAll('.verse-card');
+  cards.forEach(card => {
+    state.selectedVerses.add(parseInt(card.dataset.verse));
+    card.classList.add('selected');
   });
   updateCopyButton();
 }
 
 function clearAllVerses() {
-  const checkboxes = DOM.versesList.querySelectorAll('input[type="checkbox"]');
-  checkboxes.forEach(cb => {
-    cb.checked = false;
-    cb.closest('.verse-item').classList.remove('selected');
+  const cards = DOM.versesList.querySelectorAll('.verse-card');
+  cards.forEach(card => {
+    card.classList.remove('selected');
   });
   state.selectedVerses.clear();
   updateCopyButton();

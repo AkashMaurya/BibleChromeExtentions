@@ -543,7 +543,7 @@ body::-webkit-scrollbar-thumb {
 /* ═══════════ VERSES SECTION ═══════════ */
 .verses-section {
   padding: var(--sp-lg);
-  max-height: 320px;
+  max-height: 450px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -594,7 +594,7 @@ body::-webkit-scrollbar-thumb {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 12px;
   padding-right: var(--sp-xs);
 }
 
@@ -605,6 +605,45 @@ body::-webkit-scrollbar-thumb {
 .verses-list::-webkit-scrollbar-thumb {
   background: var(--scrollbar);
   border-radius: 10px;
+}
+
+/* Verse Card Design */
+.verse-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition: var(--transition);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.verse-card:hover {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.verse-card.selected {
+  background: rgba(245, 158, 11, 0.12);
+  border-left: 4px solid var(--accent);
+}
+
+.verse-card .verse-ref {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.verse-card .verse-text {
+  color: var(--text-1);
+  word-break: break-word;
 }
 
 .verse-item {
