@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(npm list:*)",
+      "Bash(Get-ChildItem -Path . -Force)",
+      "Bash(Select-Object Name, Mode)"
+    ]
+  },
+  "enabledPlugins": {
+    "commit@awesome-claude-code-plugins": true
+  }
+}

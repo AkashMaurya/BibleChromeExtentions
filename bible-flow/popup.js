@@ -1,0 +1,639 @@
+/**
+ * ═════════════════════════════════════════════════════════════
+ *  Bible Flow v2.1 — Chrome Extension (Manifest V3)
+ *  Dropdown UI: Select Testament → Book → Chapter → Verses
+ * ═════════════════════════════════════════════════════════════
+ */
+
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 1: CONFIGURATION
+   ═══════════════════════════════════════════════════════════ */
+
+const CONFIG = {
+  LOCAL_BIBLE_PATH: 'bible.json',
+  API_BASE: 'https://bolls.life',
+  API_TRANSLATIONS: ['HINDI', 'HINDCV', 'HINIRV', 'HIN', 'WEB'],
+  MAX_HISTORY: 10,
+  COPY_BADGE_MS: 2000,
+  API_TIMEOUT: 10000,
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 2: BOOK DATA ORGANIZED BY TESTAMENT
+   ═══════════════════════════════════════════════════════════ */
+
+  // Books organized by testament (using book numbers from Verseid)
+  // Old Testament: Genesis=1 to Malachi=39
+  // New Testament: Matthew=40 to Revelation=66
+  const BOOKS_BY_TESTAMENT = {
+    old: [
+      { number: 1, hindi: 'उत्पत्ति', english: 'Genesis' },
+      { number: 2, hindi: 'निर्गमन', english: 'Exodus' },
+      { number: 3, hindi: 'लैव्यव्यवस्था', english: 'Leviticus' },
+      { number: 4, hindi: 'गिनती', english: 'Numbers' },
+      { number: 5, hindi: 'व्यवस्थाविवरण', english: 'Deuteronomy' },
+      { number: 6, hindi: 'यहोशू', english: 'Joshua' },
+      { number: 7, hindi: 'न्यायियों', english: 'Judges' },
+      { number: 8, hindi: 'रूत', english: 'Ruth' },
+      { number: 9, hindi: '1 शमूएल', english: '1 Samuel' },
+      { number: 10, hindi: '2 शमूएल', english: '2 Samuel' },
+      { number: 11, hindi: '1 राजा', english: '1 Kings' },
+      { number: 12, hindi: '2 राजा', english: '2 Kings' },
+      { number: 13, hindi: '1 इतिहास', english: '1 Chronicles' },
+      { number: 14, hindi: '2 इतिहास', english: '2 Chronicles' },
+      { number: 15, hindi: 'एज्रा', english: 'Ezra' },
+      { number: 16, hindi: 'नहेमायाह', english: 'Nehemiah' },
+      { number: 17, hindi: 'एस्तेर', english: 'Esther' },
+      { number: 18, hindi: 'अय्यूब', english: 'Job' },
+      { number: 19, hindi: 'भजन संहिता', english: 'Psalms' },
+      { number: 20, hindi: 'नीतिवचन', english: 'Proverbs' },
+      { number: 21, hindi: 'सभोपदेशक', english: 'Ecclesiastes' },
+      { number: 22, hindi: 'श्रेष्ठगीत', english: 'Song of Solomon' },
+      { number: 23, hindi: 'यशायाह', english: 'Isaiah' },
+      { number: 24, hindi: 'यिर्मयाह', english: 'Jeremiah' },
+      { number: 25, hindi: 'विलापगीत', english: 'Lamentations' },
+      { number: 26, hindi: 'यहेजकेल', english: 'Ezekiel' },
+      { number: 27, hindi: 'दानिय्येल', english: 'Daniel' },
+      { number: 28, hindi: 'होशे', english: 'Hosea' },
+      { number: 29, hindi: 'योएल', english: 'Joel' },
+      { number: 30, hindi: 'आमोस', english: 'Amos' },
+      { number: 31, hindi: 'ओबद्याह', english: 'Obadiah' },
+      { number: 32, hindi: 'योना', english: 'Jonah' },
+      { number: 33, hindi: 'मीका', english: 'Micah' },
+      { number: 34, hindi: 'नहूम', english: 'Nahum' },
+      { number: 35, hindi: 'हबक्कूक', english: 'Habakkuk' },
+      { number: 36, hindi: 'सपन्याह', english: 'Zephaniah' },
+      { number: 37, hindi: 'हाग्गै', english: 'Haggai' },
+      { number: 38, hindi: 'जकर्याह', english: 'Zechariah' },
+      { number: 39, hindi: 'मलाकी', english: 'Malachi' },
+    ],
+    new: [
+      { number: 40, hindi: 'मत्ती', english: 'Matthew' },
+      { number: 41, hindi: 'मरकुस', english: 'Mark' },
+      { number: 42, hindi: 'लूका', english: 'Luke' },
+      { number: 43, hindi: 'यूहन्ना', english: 'John' },
+      { number: 44, hindi: 'प्रेरितों के काम', english: 'Acts' },
+      { number: 45, hindi: 'रोमियों', english: 'Romans' },
+      { number: 46, hindi: '1 कुरिन्थियों', english: '1 Corinthians' },
+      { number: 47, hindi: '2 कुरिन्थियों', english: '2 Corinthians' },
+      { number: 48, hindi: 'गलातियों', english: 'Galatians' },
+      { number: 49, hindi: 'इफिसियों', english: 'Ephesians' },
+      { number: 50, hindi: 'फिलिप्पियों', english: 'Philippians' },
+      { number: 51, hindi: 'कुलुस्सियों', english: 'Colossians' },
+      { number: 52, hindi: '1 थिस्सलुनीकियों', english: '1 Thessalonians' },
+      { number: 53, hindi: '2 थिस्सलुनीकियों', english: '2 Thessalonians' },
+      { number: 54, hindi: '1 तीमुथियुस', english: '1 Timothy' },
+      { number: 55, hindi: '2 तीमुथियुस', english: '2 Timothy' },
+      { number: 56, hindi: 'तीतुस', english: 'Titus' },
+      { number: 57, hindi: 'फिलेमोन', english: 'Philemon' },
+      { number: 58, hindi: 'इब्रानियों', english: 'Hebrews' },
+      { number: 59, hindi: 'याकूब', english: 'James' },
+      { number: 60, hindi: '1 पतरस', english: '1 Peter' },
+      { number: 61, hindi: '2 पतरस', english: '2 Peter' },
+      { number: 62, hindi: '1 यूहन्ना', english: '1 John' },
+      { number: 63, hindi: '2 यूहन्ना', english: '2 John' },
+      { number: 64, hindi: '3 यूहन्ना', english: '3 John' },
+      { number: 65, hindi: 'यहूदा', english: 'Jude' },
+      { number: 66, hindi: 'प्रकाशितवाक्य', english: 'Revelation' },
+    ],
+  };
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 3: APPLICATION STATE
+   ═══════════════════════════════════════════════════════════ */
+
+const state = {
+  bibleData: null,
+  apiTranslation: null,
+  chapterCache: new Map(),
+  currentBook: null,
+  currentChapter: null,
+  currentVerses: [],
+  selectedVerses: new Set(),
+  history: [],
+  autoCopy: true,
+  darkMode: true,
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 4: DOM ELEMENTS
+   ═══════════════════════════════════════════════════════════ */
+
+const $ = (id) => document.getElementById(id);
+
+const DOM = {
+  // Selectors
+  testamentSelect: $('testament-select'),
+  bookSelect: $('book-select'),
+  chapterSelect: $('chapter-select'),
+  
+  // Verses
+  versesSection: $('verses-section'),
+  versesTitle: $('verses-title'),
+  versesList: $('verses-list'),
+  selectAllBtn: $('select-all-btn'),
+  clearAllBtn: $('clear-all-btn'),
+  copySelectedBtn: $('copy-selected-btn'),
+  
+  // History
+  historySection: $('history-section'),
+  historyList: $('history-list'),
+  clearHistoryBtn: $('clear-history-btn'),
+  
+  // Controls
+  themeToggle: $('theme-toggle'),
+  autoCopyTgl: $('auto-copy-toggle'),
+  badgeCopied: $('badge-copied'),
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 5: UTILITY FUNCTIONS
+   ═══════════════════════════════════════════════════════════ */
+
+function saveState() {
+  localStorage.setItem('bibleflow_state', JSON.stringify({
+    history: state.history.slice(0, CONFIG.MAX_HISTORY),
+    autoCopy: state.autoCopy,
+    darkMode: state.darkMode,
+  }));
+}
+
+function loadState() {
+  try {
+    const data = JSON.parse(localStorage.getItem('bibleflow_state'));
+    if (data) {
+      state.history = data.history || [];
+      state.autoCopy = data.autoCopy !== false;
+      state.darkMode = data.darkMode !== false;
+    }
+  } catch (e) {
+    // Ignore
+  }
+}
+
+function relTime(timestamp) {
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function flashBadge() {
+  DOM.badgeCopied.classList.add('show');
+  setTimeout(() => DOM.badgeCopied.classList.remove('show'), CONFIG.COPY_BADGE_MS);
+}
+
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', state.darkMode ? 'dark' : 'light');
+  DOM.themeToggle.textContent = state.darkMode ? '🌙' : '☀️';
+}
+
+function applyAutoCopyToggle() {
+  DOM.autoCopyTgl.classList.toggle('active', state.autoCopy);
+}
+
+function renderHistory() {
+  if (!state.history.length) {
+    DOM.historySection.hidden = true;
+    return;
+  }
+  
+  DOM.historySection.hidden = false;
+  DOM.historyList.innerHTML = state.history.map((h, i) => `
+    <div class="history-item" data-index="${i}">
+      <span class="ref">${h.hindiRef}</span>
+      <span class="time">${relTime(h.timestamp)}</span>
+    </div>
+  `).join('');
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 6: BIBLE DATA LOADING
+   ═══════════════════════════════════════════════════════════ */
+
+async function loadLocalBible() {
+  if (state.bibleData) return state.bibleData;
+  
+  try {
+    const response = await fetch(CONFIG.LOCAL_BIBLE_PATH);
+    if (!response.ok) throw new Error('Failed');
+    
+    state.bibleData = await response.json();
+    console.log('📖 Local Bible loaded:', state.bibleData.Book?.length || 0, 'books');
+    return state.bibleData;
+  } catch (e) {
+    console.log('⚠️ Local load failed:', e.message);
+    return null;
+  }
+}
+
+async function detectTranslation() {
+  if (state.apiTranslation) return state.apiTranslation;
+  
+  for (const code of CONFIG.API_TRANSLATIONS) {
+    try {
+      const res = await fetch(`${CONFIG.API_BASE}/get-books/${code}/`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          state.apiTranslation = code;
+          return code;
+        }
+      }
+    } catch (e) {
+      // Continue
+    }
+  }
+  return null;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 7: DROPDOWN FUNCTIONS
+   ═══════════════════════════════════════════════════════════ */
+
+function populateTestamentDropdown() {
+  // Already populated
+}
+
+function populateBookDropdown(testament) {
+  const books = BOOKS_BY_TESTAMENT[testament] || [];
+  
+  DOM.bookSelect.innerHTML = '<option value="">Select Book</option>';
+  
+  books.forEach(book => {
+    const option = document.createElement('option');
+    option.value = book.number;
+    option.textContent = `${book.hindi} (${book.english})`;
+    DOM.bookSelect.appendChild(option);
+  });
+  
+  DOM.bookSelect.disabled = false;
+  DOM.chapterSelect.innerHTML = '<option value="">Select Book First</option>';
+  DOM.chapterSelect.disabled = true;
+  DOM.versesSection.hidden = true;
+}
+
+function populateChapterDropdown(bookNumber) {
+  if (!state.bibleData) return;
+  
+  const bookIndex = bookNumber - 1;
+  const book = state.bibleData.Book?.[bookIndex];
+  
+  if (!book || !book.Chapter) {
+    DOM.chapterSelect.innerHTML = '<option value="">No chapters found</option>';
+    return;
+  }
+  
+  const numChapters = book.Chapter.length;
+  
+  DOM.chapterSelect.innerHTML = '<option value="">Select Chapter</option>';
+  
+  for (let i = 1; i <= numChapters; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = `Chapter ${i}`;
+    DOM.chapterSelect.appendChild(option);
+  }
+  
+  DOM.chapterSelect.disabled = false;
+  DOM.versesSection.hidden = true;
+}
+
+async function showVerses(bookNumber, chapter) {
+  state.currentBook = bookNumber;
+  state.currentChapter = chapter;
+  state.selectedVerses.clear();
+  
+  console.log('📖 showVerses called:', { bookNumber, chapter });
+  
+  // Get book info
+  const testament = bookNumber <= 39 ? 'old' : 'new';
+  const books = BOOKS_BY_TESTAMENT[testament];
+  const bookInfo = books.find(b => b.number === bookNumber);
+  
+  console.log('📖 Book info:', bookInfo);
+  
+  // Update title
+  DOM.versesTitle.textContent = `${bookInfo.hindi} ${chapter}`;
+  
+  // Load verses from local Bible
+  const bible = await loadLocalBible();
+  console.log('📖 Bible loaded:', bible ? 'yes' : 'no', 'books:', bible?.Book?.length);
+  
+  if (!bible) {
+    DOM.versesList.innerHTML = '<div class="verse-item">Failed to load Bible data</div>';
+    DOM.versesSection.hidden = false;
+    return;
+  }
+  
+  const bookIndex = bookNumber - 1;
+  const book = state.bibleData.Book?.[bookIndex];
+  console.log('📖 Book data:', book ? 'found' : 'not found', 'index:', bookIndex);
+  
+  if (!book) {
+    DOM.versesList.innerHTML = '<div class="verse-item">Book not found in data</div>';
+    DOM.versesSection.hidden = false;
+    return;
+  }
+  
+  const chapterData = book?.Chapter?.[chapter - 1];
+  console.log('📖 Chapter data:', chapterData ? 'found' : 'not found', 'chapters:', book.Chapter?.length);
+  
+  if (!chapterData) {
+    DOM.versesList.innerHTML = '<div class="verse-item">Chapter not found</div>';
+    DOM.versesSection.hidden = false;
+    return;
+  }
+  
+  const verses = chapterData.Verse || [];
+  console.log('📖 Verses found:', verses.length);
+  console.log('📖 First verse sample:', verses[0]);
+  
+  if (verses.length === 0) {
+    // Try API as fallback
+    try {
+      const trans = await detectTranslation();
+      if (trans) {
+        const url = `${CONFIG.API_BASE}/get-chapter/${trans}/${bookNumber}/${chapter}/`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          state.currentVerses = data;
+          renderVersesList(data, chapter);
+          return;
+        }
+      }
+    } catch (e) {
+      console.log('API fallback failed:', e.message);
+    }
+    
+    DOM.versesList.innerHTML = '<div class="verse-item">No verses found</div>';
+    return;
+  }
+  
+  state.currentVerses = verses;
+  renderVersesList(verses, chapter);
+}
+
+function renderVersesList(verses, chapter) {
+  DOM.versesList.innerHTML = '';
+  
+  console.log('📖 Rendering verses, total:', verses.length);
+  
+  verses.forEach((v) => {
+    const verseid = v.Verseid || v.verse;
+    const text = v.Verse || v.text || '';
+    
+    // Extract verse number from verseid (format: BBCCVVV)
+    // Example: 50004001 = book 50, chapter 4, verse 1
+    const verseNum = verseid % 1000;
+    
+    // Skip verse 0 (intro/heading) - it doesn't exist in actual Bible
+    if (verseNum === 0) return;
+    
+    console.log('📖 Verse:', verseNum, '-', text.substring(0, 20));
+    
+    const item = document.createElement('label');
+    item.className = 'verse-item';
+    item.innerHTML = `
+      <input type="checkbox" data-verse="${verseNum}" data-vid="${verseid}">
+      <span class="verse-number">${verseNum}</span>
+      <span class="verse-text">${text}</span>
+    `;
+    
+    const checkbox = item.querySelector('input');
+    checkbox.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        state.selectedVerses.add(verseNum);
+        item.classList.add('selected');
+      } else {
+        state.selectedVerses.delete(verseNum);
+        item.classList.remove('selected');
+      }
+      updateCopyButton();
+      copySelectedVerses();
+    });
+    
+    DOM.versesList.appendChild(item);
+  });
+  
+  DOM.versesSection.hidden = false;
+}
+
+function updateCopyButton() {
+  const count = state.selectedVerses.size;
+  DOM.copySelectedBtn.disabled = count === 0;
+  DOM.copySelectedBtn.textContent = count > 0 
+    ? `📋 Copy ${count} Verse${count > 1 ? 's' : ''}` 
+    : '📋 Copy Selected Verses';
+}
+
+function selectAllVerses() {
+  const checkboxes = DOM.versesList.querySelectorAll('input[type="checkbox"]');
+  checkboxes.forEach(cb => {
+    cb.checked = true;
+    state.selectedVerses.add(parseInt(cb.dataset.verse));
+    cb.closest('.verse-item').classList.add('selected');
+  });
+  updateCopyButton();
+}
+
+function clearAllVerses() {
+  const checkboxes = DOM.versesList.querySelectorAll('input[type="checkbox"]');
+  checkboxes.forEach(cb => {
+    cb.checked = false;
+    cb.closest('.verse-item').classList.remove('selected');
+  });
+  state.selectedVerses.clear();
+  updateCopyButton();
+}
+
+async function copySelectedVerses() {
+  if (state.selectedVerses.size === 0) return;
+  
+  const testament = state.currentBook <= 39 ? 'old' : 'new';
+  const books = BOOKS_BY_TESTAMENT[testament];
+  const bookInfo = books.find(b => b.number === state.currentBook);
+  
+  const lines = [];
+  
+  state.currentVerses.forEach((v) => {
+    const verseid = v.Verseid || v.verse;
+    const verseNum = verseid % 1000;
+    
+    // Skip verse 0 (intro)
+    if (verseNum === 0) return;
+    
+    if (state.selectedVerses.has(verseNum)) {
+      const text = v.Verse || v.text || '';
+      lines.push(`${bookInfo.hindi} ${state.currentChapter}:${verseNum} — ${text}`);
+    }
+  });
+  
+  const clipboardText = lines.join('\n\n');
+  
+  try {
+    await navigator.clipboard.writeText(clipboardText);
+    flashBadge();
+    
+    const hindiRef = `${bookInfo.hindi} ${state.currentChapter} (${state.selectedVerses.size} verses)`;
+    addToHistory(`${state.currentBook}:${state.currentChapter}`, hindiRef);
+  } catch (e) {
+    console.error('Copy failed:', e);
+  }
+}
+
+function addToHistory(reference, hindiRef) {
+  state.history = state.history.filter(h => h.reference !== reference);
+  state.history.unshift({
+    reference,
+    hindiRef,
+    timestamp: Date.now(),
+  });
+  
+  if (state.history.length > CONFIG.MAX_HISTORY) {
+    state.history.length = CONFIG.MAX_HISTORY;
+  }
+  
+  saveState();
+  renderHistory();
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 8: EVENT HANDLERS
+   ═══════════════════════════════════════════════════════════ */
+
+function bindEvents() {
+  // Testament dropdown
+  DOM.testamentSelect.addEventListener('change', (e) => {
+    if (e.target.value) {
+      populateBookDropdown(e.target.value);
+    } else {
+      DOM.bookSelect.innerHTML = '<option value="">Select Book First</option>';
+      DOM.bookSelect.disabled = true;
+      DOM.chapterSelect.innerHTML = '<option value="">Select Book First</option>';
+      DOM.chapterSelect.disabled = true;
+      DOM.versesSection.hidden = true;
+    }
+  });
+  
+  // Book dropdown
+  DOM.bookSelect.addEventListener('change', (e) => {
+    const bookNumber = parseInt(e.target.value);
+    if (bookNumber) {
+      state.currentBook = bookNumber;  // ← ADD THIS LINE
+      console.log('📖 Book selected:', bookNumber);
+      populateChapterDropdown(bookNumber);
+    } else {
+      DOM.chapterSelect.innerHTML = '<option value="">Select Book First</option>';
+      DOM.chapterSelect.disabled = true;
+      DOM.versesSection.hidden = true;
+    }
+  });
+  
+  // Chapter dropdown
+  DOM.chapterSelect.addEventListener('change', (e) => {
+    const chapter = parseInt(e.target.value);
+    console.log('📖 Chapter selected:', chapter, 'book:', state.currentBook);
+    if (chapter && state.currentBook) {
+      showVerses(state.currentBook, chapter);
+    } else {
+      console.log('📖 No book selected or chapter invalid');
+      DOM.versesSection.hidden = true;
+    }
+  });
+  
+  // Select All / Clear All
+  DOM.selectAllBtn.addEventListener('click', selectAllVerses);
+  DOM.clearAllBtn.addEventListener('click', clearAllVerses);
+  
+  // Copy Selected
+  DOM.copySelectedBtn.addEventListener('click', copySelectedVerses);
+  
+  // Theme toggle
+  DOM.themeToggle.addEventListener('click', () => {
+    state.darkMode = !state.darkMode;
+    applyTheme();
+    saveState();
+  });
+  
+  // Auto-copy toggle (now just for selection only)
+  DOM.autoCopyTgl.addEventListener('click', () => {
+    state.autoCopy = !state.autoCopy;
+    applyAutoCopyToggle();
+    saveState();
+  });
+  
+  // History click
+  DOM.historyList.addEventListener('click', (e) => {
+    const item = e.target.closest('.history-item');
+    if (item) {
+      const index = parseInt(item.dataset.index);
+      const entry = state.history[index];
+      if (entry) {
+        // Parse reference like "43:3" (book:chapter)
+        const [bookNum, chapter] = entry.reference.split(':').map(Number);
+        
+        // Set dropdowns
+        const testament = bookNum <= 39 ? 'old' : 'new';
+        DOM.testamentSelect.value = testament;
+        populateBookDropdown(testament);
+        DOM.bookSelect.value = bookNum;
+        populateChapterDropdown(bookNum);
+        
+        setTimeout(() => {
+          DOM.chapterSelect.value = chapter;
+          showVerses(bookNum, chapter);
+        }, 100);
+      }
+    }
+  });
+  
+  // Clear history
+  DOM.clearHistoryBtn.addEventListener('click', () => {
+    state.history = [];
+    saveState();
+    renderHistory();
+  });
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION 9: INITIALIZATION
+   ═══════════════════════════════════════════════════════════ */
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load saved state
+  loadState();
+  
+  // Apply UI state
+  applyTheme();
+  applyAutoCopyToggle();
+  renderHistory();
+  
+  // Bind events
+  bindEvents();
+  
+  // Initialize dropdowns
+  populateTestamentDropdown();
+  
+  // Load Bible data in background
+  await loadLocalBible();
+  
+  console.log('✝ Bible Flow v2.1 ready');
+});
