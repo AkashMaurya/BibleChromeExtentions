@@ -4,7 +4,12 @@
       "Bash(dir:*)",
       "Bash(npm list:*)",
       "Bash(Get-ChildItem -Path . -Force)",
-      "Bash(Select-Object Name, Mode)"
+      "Bash(Select-Object Name, Mode)",
+      "Bash(git commit *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(node convert-tlv.js)",
+      "Bash(git add *)"
     ]
   },
   "enabledPlugins": {

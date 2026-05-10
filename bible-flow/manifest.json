@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Bible Flow",
-  "version": "2.1.0",
-  "description": "Instant Hindi Bible verse lookup with dropdown selector",
+  "version": "2.2.0",
+  "description": "Hindi & English Bible verse lookup with dropdown selector",
   "permissions": [
     "clipboardWrite"
   ],
@@ -14,7 +14,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["bible.json"],
+      "resources": ["bible.json", "english-bible.json"],
       "matches": ["<all_urls>"]
     }
   ]

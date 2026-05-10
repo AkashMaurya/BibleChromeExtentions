@@ -12,7 +12,8 @@
    ═══════════════════════════════════════════════════════════ */
 
 const CONFIG = {
-  LOCAL_BIBLE_PATH: 'bible.json',
+  HINDI_BIBLE_PATH: 'bible.json',
+  ENGLISH_BIBLE_PATH: 'english-bible.json',
   API_BASE: 'https://bolls.life',
   API_TRANSLATIONS: ['HINDI', 'HINDCV', 'HINIRV', 'HIN', 'WEB'],
   MAX_HISTORY: 10,
@@ -117,6 +118,7 @@ const state = {
   history: [],
   autoCopy: true,
   darkMode: true,
+  language: 'hindi', // 'hindi' or 'english'
 };
 
 
@@ -148,6 +150,7 @@ const DOM = {
   // Controls
   themeToggle: $('theme-toggle'),
   autoCopyTgl: $('auto-copy-toggle'),
+  languageToggle: $('language-toggle'),
   badgeCopied: $('badge-copied'),
 };
 
@@ -161,6 +164,7 @@ function saveState() {
     history: state.history.slice(0, CONFIG.MAX_HISTORY),
     autoCopy: state.autoCopy,
     darkMode: state.darkMode,
+    language: state.language,
   }));
 }
 
@@ -171,6 +175,7 @@ function loadState() {
       state.history = data.history || [];
       state.autoCopy = data.autoCopy !== false;
       state.darkMode = data.darkMode !== false;
+      state.language = data.language || 'hindi';
     }
   } catch (e) {
     // Ignore
@@ -201,6 +206,14 @@ function applyAutoCopyToggle() {
   DOM.autoCopyTgl.classList.toggle('active', state.autoCopy);
 }
 
+function applyLanguageToggle() {
+  DOM.languageToggle.textContent = state.language === 'hindi' ? 'हिंदी' : 'EN';
+}
+
+function getCurrentBiblePath() {
+  return state.language === 'english' ? CONFIG.ENGLISH_BIBLE_PATH : CONFIG.HINDI_BIBLE_PATH;
+}
+
 function renderHistory() {
   if (!state.history.length) {
     DOM.historySection.hidden = true;
@@ -222,14 +235,15 @@ function renderHistory() {
    ═══════════════════════════════════════════════════════════ */
 
 async function loadLocalBible() {
+  const biblePath = getCurrentBiblePath();
   if (state.bibleData) return state.bibleData;
-  
+
   try {
-    const response = await fetch(CONFIG.LOCAL_BIBLE_PATH);
+    const response = await fetch(biblePath);
     if (!response.ok) throw new Error('Failed');
-    
+
     state.bibleData = await response.json();
-    console.log('📖 Local Bible loaded:', state.bibleData.Book?.length || 0, 'books');
+    console.log('📖 Local Bible loaded:', state.bibleData.Book?.length || 0, 'books', '(' + state.language + ')');
     return state.bibleData;
   } catch (e) {
     console.log('⚠️ Local load failed:', e.message);
@@ -271,16 +285,21 @@ function populateTestamentDropdown() {
 
 function populateBookDropdown(testament) {
   const books = BOOKS_BY_TESTAMENT[testament] || [];
-  
+
   DOM.bookSelect.innerHTML = '<option value="">Select Book</option>';
-  
+
   books.forEach(book => {
     const option = document.createElement('option');
     option.value = book.number;
-    option.textContent = `${book.hindi} (${book.english})`;
+    // Show name based on selected language
+    if (state.language === 'english') {
+      option.textContent = book.english;
+    } else {
+      option.textContent = `${book.hindi} (${book.english})`;
+    }
     DOM.bookSelect.appendChild(option);
   });
-  
+
   DOM.bookSelect.disabled = false;
   DOM.chapterSelect.innerHTML = '<option value="">Select Book First</option>';
   DOM.chapterSelect.disabled = true;
@@ -328,7 +347,9 @@ async function showVerses(bookNumber, chapter) {
   console.log('📖 Book info:', bookInfo);
   
   // Update title
-  DOM.versesTitle.textContent = `${bookInfo.hindi} ${chapter}`;
+  // Update title based on language
+  const titleBookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
+  DOM.versesTitle.textContent = `${titleBookName} ${chapter}`;
   
   // Load verses from local Bible
   const bible = await loadLocalBible();
@@ -480,18 +501,23 @@ async function copySelectedVerses() {
     
     if (state.selectedVerses.has(verseNum)) {
       const text = v.Verse || v.text || '';
-      lines.push(`${bookInfo.hindi} ${state.currentChapter}:${verseNum} — ${text}`);
+      // Use language-specific book name
+      const bookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
+      lines.push(`${bookName} ${state.currentChapter}:${verseNum} — ${text}`);
     }
   });
-  
+
   const clipboardText = lines.join('\n\n');
-  
+
   try {
     await navigator.clipboard.writeText(clipboardText);
     flashBadge();
-    
-    const hindiRef = `${bookInfo.hindi} ${state.currentChapter} (${state.selectedVerses.size} verses)`;
-    addToHistory(`${state.currentBook}:${state.currentChapter}`, hindiRef);
+
+    // Use language-specific reference for history
+    const bookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
+    const refLabel = state.language === 'english' ? 'verses' : 'आयतें';
+    const historyRef = `${bookName} ${state.currentChapter} (${state.selectedVerses.size} ${refLabel})`;
+    addToHistory(`${state.currentBook}:${state.currentChapter}`, historyRef);
   } catch (e) {
     console.error('Copy failed:', e);
   }
@@ -578,6 +604,23 @@ function bindEvents() {
     applyAutoCopyToggle();
     saveState();
   });
+
+  // Language toggle
+  DOM.languageToggle.addEventListener('click', async () => {
+    state.language = state.language === 'hindi' ? 'english' : 'hindi';
+    applyLanguageToggle();
+    // Clear cached Bible data and reload
+    state.bibleData = null;
+    state.currentVerses = [];
+    state.selectedVerses.clear();
+    DOM.versesSection.hidden = true;
+    await loadLocalBible();
+    // Refresh dropdown if a testament is selected
+    if (DOM.testamentSelect.value) {
+      populateBookDropdown(DOM.testamentSelect.value);
+    }
+    saveState();
+  });
   
   // History click
   DOM.historyList.addEventListener('click', (e) => {
@@ -624,6 +667,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Apply UI state
   applyTheme();
   applyAutoCopyToggle();
+  applyLanguageToggle();
   renderHistory();
   
   // Bind events
