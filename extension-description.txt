@@ -1,0 +1,59 @@
+Bible Flow - Chrome Extension Description
+
+Category: Religious/Bible Study Tool
+Language: JavaScript (Chrome Extension Manifest V3)
+
+Description:
+Bible Flow is a Chrome Extension that provides instant Bible verse lookup with dual-language support (Hindi and English). Users can select Testament, Book, Chapter, and Verses through a dropdown interface, then copy selected verses to clipboard.
+
+Key Features:
+- Dual language support (Hindi BSI version, English TLV version)
+- Chapter/verse selection via dropdown menus
+- Checkbox-based verse selection with hover effects and visual feedback
+- Multi-book verse selection — pick verses across different books simultaneously
+- Verse-first display format — text shown first, reference below
+- Auto-copy to clipboard functionality
+- Recent copies history
+- Dark/Light theme toggle
+- API fallback when local data is incomplete
+
+Bible Versions:
+- Hindi: BSI (Bible Society of India)
+- English: TLV (Tree of Life Version)
+
+================================================================================
+CHROME WEB STORE COMPLIANCE INFORMATION
+================================================================================
+
+SINGLE PURPOSE:
+A Chrome Extension for Hindi and English Bible verse lookup with dropdown selector interface. Users select Testament → Book → Chapter → Verses and copy selected verses to clipboard.
+
+PERMISSION JUSTIFICATIONS:
+
+1. clipboardWrite:
+   Required to copy selected Bible verses to the user's clipboard. This is the core functionality of the extension.
+
+2. Host Permission (https://bolls.life/*):
+   Used as an API fallback when local Bible data is incomplete or fails to load. This provides a better user experience by ensuring verse content is always available.
+
+REMOTE CODE:
+No - This extension does not use remote code. All JavaScript is bundled within the extension package.
+
+DATA USAGE (All "No"):
+- Personally identifiable information: NO
+- Health information: NO
+- Financial and payment information: NO
+- Authentication information: NO
+- Personal communications: NO
+- Location: NO
+- Web history: NO
+- User activity: NO
+- Website content: NO
+
+CERTIFICATIONS:
+[x] I do not sell or transfer user data to third parties, apart from the approved use cases
+[x] I do not use or transfer user data for purposes that are unrelated to my item's single purpose
+[x] I do not use or transfer user data to determine creditworthiness or for lending purposes
+
+PRIVACY POLICY:
+This extension does not collect, transmit, or share any user data. All data (theme preference and copy history) is stored locally on the user's device using localStorage and is under the user's full control. Users can clear their history at any time. No data is ever sent to external servers except for the optional API fallback (bolls.life) to fetch Bible content when local data is incomplete.
