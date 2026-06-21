@@ -795,6 +795,7 @@ function bindEvents() {
 
   DOM.presentThemeSelect.addEventListener('change', (e) => {
     state.presentTheme = e.target.value;
+    sendToPresenter({ type: 'SET_THEME', theme: state.presentTheme });
     saveState();
   });
 

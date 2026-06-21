@@ -457,9 +457,8 @@
       hindi: verse.hindi || '',
     });
 
-    if (state.verses.length === 1) {
-      state.activeIndex = 0;
-    }
+    // Always show the newly added verse
+    state.activeIndex = state.verses.length - 1;
 
     render();
     saveToStorage();
@@ -817,6 +816,9 @@
     } else if (msg.type === 'SYNC_VERSES') {
       syncVerses(msg.verses);
       sendResponse({ ok: true });
+    } else if (msg.type === 'SET_THEME') {
+      applyTheme(msg.theme);
+      sendResponse({ ok: true });
     }
   });
 
@@ -828,6 +830,23 @@
     var d = document.createElement('div');
     d.textContent = str || '';
     return d.innerHTML;
+  }
+
+  /* ═══════════════════════════════════════════════════
+     THEME
+     ═══════════════════════════════════════════════════ */
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme || 'dark');
+  }
+
+  function loadSavedTheme() {
+    chrome.storage.local.get('bibleflow_state', function(result) {
+      var data = result.bibleflow_state;
+      if (data && data.presentTheme) {
+        applyTheme(data.presentTheme);
+      }
+    });
   }
 
   /* ═══════════════════════════════════════════════════
@@ -952,6 +971,8 @@
     DOM.btnClearDrawing.style.display = 'none';
     DOM.navGroup.style.display = 'none';
     DOM.displayArea.style.overflowY = 'hidden';
+
+    loadSavedTheme();
 
     loadFromStorage(function() {
       resizeCanvas();

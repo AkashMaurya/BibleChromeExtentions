@@ -76,9 +76,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message.type;
   console.log('[BG] Received message:', type);
 
-  if (type === 'ADD_VERSE' || type === 'REMOVE_VERSE' || type === 'CLEAR_VERSES' || type === 'SYNC_VERSES') {
-    handleVerseMessage(message);
+  if (type === 'ADD_VERSE' || type === 'REMOVE_VERSE' || type === 'CLEAR_VERSES' || type === 'SYNC_VERSES' || type === 'SET_THEME') {
     forwardToPresenter(message);
+    if (type === 'SET_THEME') {
+      sendResponse({ ok: true });
+      return false;
+    }
+    handleVerseMessage(message);
     sendResponse({ ok: true });
     return false;
   }
