@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bible Flow</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+
+    <!-- HEADER -->
+    <header class="header glass-card">
+      <div class="logo">
+        <span class="logo-icon">✝</span>
+        <h1 class="logo-text">Bible Flow By Jesus Sheep Akash</h1>
+      </div>
+      <div class="header-controls">
+        <button
+          id="auto-copy-toggle"
+          class="ctrl-btn active"
+          aria-label="Toggle auto copy"
+          title="Auto Copy: ON"
+        >📋</button>
+        <button
+          id="theme-toggle"
+          class="ctrl-btn"
+          aria-label="Toggle theme"
+          title="Switch theme"
+        >🌙</button>
+        <button
+          id="language-toggle"
+          class="ctrl-btn"
+          aria-label="Toggle language"
+          title="Switch language"
+        >हिंदी</button>
+        <button
+          id="present-btn"
+          class="ctrl-btn present-btn"
+          aria-label="Present verses"
+          title="Present selected verses"
+        >▶</button>
+        <button
+          id="open-presenter-btn"
+          class="ctrl-btn"
+          aria-label="Open Presenter Tab"
+          title="Open Presenter Tab"
+        >📺</button>
+        <button
+          id="settings-btn"
+          class="ctrl-btn"
+          aria-label="Settings"
+          title="Presentation settings"
+        >⚙</button>
+      </div>
+    </header>
+
+    <!-- SETTINGS PANEL -->
+    <section class="settings-panel glass-card hidden" id="settings-panel">
+      <div class="settings-header">
+        <h3>Presentation Settings</h3>
+        <button id="settings-close-btn" class="ctrl-btn" aria-label="Close settings">✕</button>
+      </div>
+      <div class="settings-row">
+        <label for="present-theme-select">Presentation Theme:</label>
+        <select id="present-theme-select">
+          <option value="warm-paper">Warm Paper</option>
+          <option value="christmas">Christmas</option>
+          <option value="palm-sunday">Palm Sunday</option>
+          <option value="good-friday">Good Friday</option>
+          <option value="easter">Easter</option>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label for="present-display-select">Bilingual Display:</label>
+        <select id="present-display-select">
+          <option value="toggle">Toggle (press T to switch)</option>
+          <option value="side-by-side">Side by Side</option>
+        </select>
+      </div>
+      <p class="settings-note">Select verses, then click ▶ to present. Press Esc to exit presentation.</p>
+    </section>
+
+    <!-- DROPDOWN SELECTORS -->
+    <section class="selector-section glass-card">
+      <div class="selector-row">
+        <label for="testament-select">📖 Testament:</label>
+        <select id="testament-select">
+          <option value="">Select Testament</option>
+          <option value="old">Old Testament (पुराना नियम)</option>
+          <option value="new">New Testament (नया नियम)</option>
+        </select>
+      </div>
+
+      <div class="selector-row">
+        <label for="book-select">📖 Book (पुस्तक):</label>
+        <select id="book-select" disabled>
+          <option value="">Select Book First</option>
+        </select>
+      </div>
+
+      <div class="selector-row">
+        <label for="chapter-select">📖 Chapter (अध्याय):</label>
+        <select id="chapter-select" disabled>
+          <option value="">Select Book First</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- VERSE LIST -->
+    <section class="verses-section glass-card" id="verses-section" hidden>
+      <div class="verses-header">
+        <h3 id="verses-title">Verses</h3>
+        <div class="verses-actions">
+          <button id="select-all-btn" class="small-btn">Select All</button>
+          <button id="clear-all-btn" class="small-btn">Clear All</button>
+        </div>
+      </div>
+      <div class="verses-list" id="verses-list"></div>
+      <div class="verses-footer-btns">
+        <button id="copy-selected-btn" class="copy-selected-btn">
+          📋 Copy Selected Verses
+        </button>
+        <button id="present-selected-btn" class="present-selected-btn">
+          ▶ Present
+        </button>
+      </div>
+    </section>
+
+    <!-- COPIED CARD -->
+    <section class="copied-card-section glass-card" id="copied-card-section" hidden>
+      <div class="copied-card" id="copied-card"></div>
+    </section>
+
+    <!-- COPY BADGE -->
+    <span class="badge-copied" id="badge-copied">✓ Copied!</span>
+
+    <!-- HISTORY -->
+    <section class="history-section glass-card" id="history-section" hidden>
+      <h3 class="history-title">Recent Copies</h3>
+      <div class="history-list" id="history-list"></div>
+      <button class="clear-history-btn" id="clear-history-btn">Clear History</button>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <p>Bible Flow v2.2 &bull; हिंदी BSI / English TLV &bull; </p>
+    </footer>
+
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

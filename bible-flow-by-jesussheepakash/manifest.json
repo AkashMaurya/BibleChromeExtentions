@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Bible Flow",
+  "version": "5.0.0",
+  "description": "Bible verse presentation tool with persistent control window, live presenter tab, and annotation",
+  "permissions": [
+    "clipboardWrite",
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://bolls.life/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Bible Flow — Click to open",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "bible.json",
+        "english-bible.json",
+        "presenter.html",
+        "presenter.js",
+        "presenter.css",
+        "editor.html",
+        "editor.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

@@ -77,9 +77,8 @@
 
 /* ──────────── BODY ──────────── */
 body {
-  width: 420px;
-  min-height: 220px;
-  max-height: 600px;
+  width: 100%;
+  min-height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
   font-family:
@@ -88,6 +87,7 @@ body {
   background: var(--bg-gradient);
   color: var(--text-1);
   line-height: 1.5;
+  margin: 0;
 }
 
 /* custom scrollbar */
@@ -186,6 +186,67 @@ body::-webkit-scrollbar-thumb {
 .ctrl-btn.active {
   border-color: var(--accent);
   box-shadow: 0 0 14px var(--accent-glow);
+}
+
+.present-btn {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.present-btn:hover {
+  background: var(--accent-hover, var(--accent));
+  opacity: 0.9;
+}
+
+/* ═══════════ SETTINGS PANEL ═══════════ */
+.hidden { display: none !important; }
+
+.settings-panel {
+  margin: var(--sp-sm) var(--sp-md);
+  padding: var(--sp-md);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-sm);
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-sm);
+}
+
+.settings-row label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.settings-row select {
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--glass-border);
+  background: var(--input-bg);
+  color: var(--text-1);
+  font-size: 13px;
+}
+
+.settings-note {
+  margin: var(--sp-sm) 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  opacity: 0.7;
 }
 
 /* ═══════════ SEARCH SECTION ═══════════ */
@@ -652,6 +713,17 @@ body::-webkit-scrollbar-thumb {
   order: 1;
 }
 
+.verse-item-card .verse-subtext {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+  word-break: break-word;
+  order: 1;
+  padding-top: 4px;
+  border-top: 1px solid var(--glass-border);
+  margin-top: 2px;
+}
+
 /* Verse body wrapper */
 .verse-body {
   display: flex;
@@ -900,4 +972,35 @@ body::-webkit-scrollbar-thumb {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* ═══ VERSES FOOTER BUTTONS ═══ */
+.verses-footer-btns {
+  display: flex;
+  gap: var(--sp-sm);
+  margin-top: var(--sp-md);
+}
+
+.verses-footer-btns .copy-selected-btn {
+  flex: 1;
+  margin-top: 0;
+}
+
+.present-selected-btn {
+  flex: 1;
+  padding: 12px;
+  background: linear-gradient(135deg, #b08a55, #c49a4a);
+  border: none;
+  border-radius: var(--r-md);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.present-selected-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(176,138,85,.4);
 }

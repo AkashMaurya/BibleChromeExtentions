@@ -1,7 +1,9 @@
 /**
  * ═════════════════════════════════════════════════════════════
- *  Bible Flow v2.1 — Chrome Extension (Manifest V3)
- *  Dropdown UI: Select Testament → Book → Chapter → Verses
+ *  Bible Flow v5.0 — Control Window
+ *  Persistent popup-style window for verse selection.
+ *  Sends verse selections to background service worker,
+ *  which relays them to the Presenter Tab.
  * ═════════════════════════════════════════════════════════════
  */
 
@@ -26,9 +28,6 @@ const CONFIG = {
    SECTION 2: BOOK DATA ORGANIZED BY TESTAMENT
    ═══════════════════════════════════════════════════════════ */
 
-  // Books organized by testament (using book numbers from Verseid)
-  // Old Testament: Genesis=1 to Malachi=39
-  // New Testament: Matthew=40 to Revelation=66
   const BOOKS_BY_TESTAMENT = {
     old: [
       { number: 1, hindi: 'उत्पत्ति', english: 'Genesis' },
@@ -109,16 +108,18 @@ const CONFIG = {
 
 const state = {
   bibleData: null,
+  hindiBibleData: null,
+  englishBibleData: null,
   apiTranslation: null,
   chapterCache: new Map(),
   currentBook: null,
   currentChapter: null,
   currentVerses: [],
-  selectedVerses: new Map(), // key: "book:chapter:verse", value: { bookNum, chapter, verseNum, text, bookName }
+  selectedVerses: new Map(),
   history: [],
   autoCopy: true,
   darkMode: true,
-  language: 'hindi', // 'hindi' or 'english'
+  language: 'hindi',
   presentTheme: 'warm-paper',
   presentDisplayMode: 'toggle',
 };
@@ -131,34 +132,23 @@ const state = {
 const $ = (id) => document.getElementById(id);
 
 const DOM = {
-  // Selectors
   testamentSelect: $('testament-select'),
   bookSelect: $('book-select'),
   chapterSelect: $('chapter-select'),
-
-  // Verses
   versesSection: $('verses-section'),
   versesTitle: $('verses-title'),
   versesList: $('verses-list'),
   selectAllBtn: $('select-all-btn'),
   clearAllBtn: $('clear-all-btn'),
   copySelectedBtn: $('copy-selected-btn'),
-  presentSelectedBtn: $('present-selected-btn'),
-
-  // Copied Card
   copiedCardSection: $('copied-card-section'),
   copiedCard: $('copied-card'),
-
-  // History
   historySection: $('history-section'),
   historyList: $('history-list'),
   clearHistoryBtn: $('clear-history-btn'),
-
-  // Controls
   themeToggle: $('theme-toggle'),
   autoCopyTgl: $('auto-copy-toggle'),
   languageToggle: $('language-toggle'),
-  presentBtn: $('present-btn'),
   openPresenterBtn: $('open-presenter-btn'),
   settingsBtn: $('settings-btn'),
   settingsPanel: $('settings-panel'),
@@ -170,44 +160,16 @@ const DOM = {
 
 
 /* ═══════════════════════════════════════════════════════════
-   SECTION 4B: PRESENTER TAB MESSAGING
+   SECTION 4B: SAFE MESSAGING TO BACKGROUND SERVICE WORKER
    ═══════════════════════════════════════════════════════════ */
 
-let presenterTabId = null;
-
 function sendToPresenter(message) {
-  try {
-    chrome.runtime.sendMessage(message);
-  } catch (e) {
-    // Presenter tab not open — silently ignore
-  }
-}
-
-function syncPresenterStorage() {
-  const verses = Array.from(state.selectedVerses.values());
-  chrome.storage.local.set({ bibleflow_presenter_verses: verses });
-}
-
-async function openPresenterTab() {
-  // Check if presenter tab is already open
-  if (presenterTabId !== null) {
-    try {
-      const tab = await chrome.tabs.get(presenterTabId);
-      if (tab) {
-        chrome.tabs.update(presenterTabId, { active: true });
-        chrome.windows.update(tab.windowId, { focused: true });
-        return;
-      }
-    } catch (e) {
-      presenterTabId = null;
+  chrome.runtime.sendMessage(message, () => {
+    // Silently ignore errors (e.g. background worker not ready, presenter tab not open)
+    if (chrome.runtime.lastError) {
+      console.debug('Presenter not ready:', chrome.runtime.lastError.message);
     }
-  }
-
-  // Create new presenter tab
-  const tab = await chrome.tabs.create({
-    url: chrome.runtime.getURL('presenter.html'),
   });
-  presenterTabId = tab.id;
 }
 
 
@@ -267,10 +229,17 @@ function applyAutoCopyToggle() {
 }
 
 function applyLanguageToggle() {
-  DOM.languageToggle.textContent = state.language === 'hindi' ? 'हिंदी' : 'EN';
+  if (state.language === 'hindi') {
+    DOM.languageToggle.textContent = 'हिंदी';
+  } else if (state.language === 'english') {
+    DOM.languageToggle.textContent = 'EN';
+  } else {
+    DOM.languageToggle.textContent = 'Both';
+  }
 }
 
 function getCurrentBiblePath() {
+  if (state.language === 'both') return CONFIG.HINDI_BIBLE_PATH;
   return state.language === 'english' ? CONFIG.ENGLISH_BIBLE_PATH : CONFIG.HINDI_BIBLE_PATH;
 }
 
@@ -279,7 +248,7 @@ function renderHistory() {
     DOM.historySection.hidden = true;
     return;
   }
-  
+
   DOM.historySection.hidden = false;
   DOM.historyList.innerHTML = state.history.map((h, i) => `
     <div class="history-item" data-index="${i}">
@@ -295,6 +264,23 @@ function renderHistory() {
    ═══════════════════════════════════════════════════════════ */
 
 async function loadLocalBible() {
+  if (state.language === 'both') {
+    if (state.hindiBibleData && state.englishBibleData) return state.hindiBibleData;
+    try {
+      const [hindiRes, englishRes] = await Promise.all([
+        fetch(CONFIG.HINDI_BIBLE_PATH),
+        fetch(CONFIG.ENGLISH_BIBLE_PATH),
+      ]);
+      if (hindiRes.ok) state.hindiBibleData = await hindiRes.json();
+      if (englishRes.ok) state.englishBibleData = await englishRes.json();
+      state.bibleData = state.hindiBibleData;
+      return state.hindiBibleData;
+    } catch (e) {
+      console.warn('Both Bible load failed:', e.message);
+      return null;
+    }
+  }
+
   const biblePath = getCurrentBiblePath();
   if (state.bibleData) return state.bibleData;
 
@@ -303,23 +289,22 @@ async function loadLocalBible() {
     if (!response.ok) throw new Error('Failed');
 
     state.bibleData = await response.json();
-    console.log('📖 Local Bible loaded:', state.bibleData.Book?.length || 0, 'books', '(' + state.language + ')');
     return state.bibleData;
   } catch (e) {
-    console.log('⚠️ Local load failed:', e.message);
+    console.warn('Local Bible load failed:', e.message);
     return null;
   }
 }
 
 async function detectTranslation() {
   if (state.apiTranslation) return state.apiTranslation;
-  
+
   for (const code of CONFIG.API_TRANSLATIONS) {
     try {
       const res = await fetch(`${CONFIG.API_BASE}/get-books/${code}/`, {
         signal: AbortSignal.timeout(5000),
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -351,7 +336,6 @@ function populateBookDropdown(testament) {
   books.forEach(book => {
     const option = document.createElement('option');
     option.value = book.number;
-    // Show name based on selected language
     if (state.language === 'english') {
       option.textContent = book.english;
     } else {
@@ -368,26 +352,26 @@ function populateBookDropdown(testament) {
 
 function populateChapterDropdown(bookNumber) {
   if (!state.bibleData) return;
-  
+
   const bookIndex = bookNumber - 1;
   const book = state.bibleData.Book?.[bookIndex];
-  
+
   if (!book || !book.Chapter) {
     DOM.chapterSelect.innerHTML = '<option value="">No chapters found</option>';
     return;
   }
-  
+
   const numChapters = book.Chapter.length;
-  
+
   DOM.chapterSelect.innerHTML = '<option value="">Select Chapter</option>';
-  
+
   for (let i = 1; i <= numChapters; i++) {
     const option = document.createElement('option');
     option.value = i;
     option.textContent = `Chapter ${i}`;
     DOM.chapterSelect.appendChild(option);
   }
-  
+
   DOM.chapterSelect.disabled = false;
   DOM.versesSection.hidden = true;
 }
@@ -395,56 +379,44 @@ function populateChapterDropdown(bookNumber) {
 async function showVerses(bookNumber, chapter) {
   state.currentBook = bookNumber;
   state.currentChapter = chapter;
-  
-  console.log('📖 showVerses called:', { bookNumber, chapter });
-  
-  // Get book info
+
   const testament = bookNumber <= 39 ? 'old' : 'new';
   const books = BOOKS_BY_TESTAMENT[testament];
   const bookInfo = books.find(b => b.number === bookNumber);
-  
-  console.log('📖 Book info:', bookInfo);
-  
-  // Update title
-  // Update title based on language
-  const titleBookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
+
+  const titleBookName = state.language === 'both'
+    ? bookInfo.hindi + ' (' + bookInfo.english + ')'
+    : state.language === 'english' ? bookInfo.english : bookInfo.hindi;
   DOM.versesTitle.textContent = `${titleBookName} ${chapter}`;
-  
-  // Load verses from local Bible
+
   const bible = await loadLocalBible();
-  console.log('📖 Bible loaded:', bible ? 'yes' : 'no', 'books:', bible?.Book?.length);
-  
+
   if (!bible) {
     DOM.versesList.innerHTML = '<div class="verse-item">Failed to load Bible data</div>';
     DOM.versesSection.hidden = false;
     return;
   }
-  
+
   const bookIndex = bookNumber - 1;
   const book = state.bibleData.Book?.[bookIndex];
-  console.log('📖 Book data:', book ? 'found' : 'not found', 'index:', bookIndex);
-  
+
   if (!book) {
     DOM.versesList.innerHTML = '<div class="verse-item">Book not found in data</div>';
     DOM.versesSection.hidden = false;
     return;
   }
-  
+
   const chapterData = book?.Chapter?.[chapter - 1];
-  console.log('📖 Chapter data:', chapterData ? 'found' : 'not found', 'chapters:', book.Chapter?.length);
-  
+
   if (!chapterData) {
     DOM.versesList.innerHTML = '<div class="verse-item">Chapter not found</div>';
     DOM.versesSection.hidden = false;
     return;
   }
-  
+
   const verses = chapterData.Verse || [];
-  console.log('📖 Verses found:', verses.length);
-  console.log('📖 First verse sample:', verses[0]);
-  
+
   if (verses.length === 0) {
-    // Try API as fallback
     try {
       const trans = await detectTranslation();
       if (trans) {
@@ -458,13 +430,13 @@ async function showVerses(bookNumber, chapter) {
         }
       }
     } catch (e) {
-      console.log('API fallback failed:', e.message);
+      console.warn('API fallback failed:', e.message);
     }
-    
+
     DOM.versesList.innerHTML = '<div class="verse-item">No verses found</div>';
     return;
   }
-  
+
   state.currentVerses = verses;
   renderVersesList(verses, chapter);
 }
@@ -473,30 +445,28 @@ function renderVersesList(verses, chapter) {
   DOM.versesList.innerHTML = '';
   DOM.copiedCardSection.hidden = true;
 
-  console.log('📖 Rendering verses, total:', verses.length);
-
-  // Store verses for later use
   state.currentVersesData = verses;
 
-  // Get book name for reference
   const testament = state.currentBook <= 39 ? 'old' : 'new';
   const books = BOOKS_BY_TESTAMENT[testament];
   const bookInfo = books.find(b => b.number === state.currentBook);
   const bookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
 
-  verses.forEach((v) => {
+  // For 'both' mode, get English verses too
+  let englishVerses = null;
+  if (state.language === 'both' && state.englishBibleData) {
+    const engBook = state.englishBibleData.Book?.[state.currentBook - 1];
+    const engChapter = engBook?.Chapter?.[chapter - 1];
+    englishVerses = engChapter?.Verse || null;
+  }
+
+  verses.forEach((v, idx) => {
     const verseid = v.Verseid || v.verse;
-    const text = v.Verse || v.text || '';
+    const hindiText = v.Verse || v.text || '';
 
-    // Extract verse number from verseid (format: BBCCVVV)
     const verseNum = verseid % 1000;
-
-    // Skip verse 0 (intro/heading)
     if (verseNum === 0) return;
 
-    console.log('📖 Verse:', verseNum, '-', text.substring(0, 20));
-
-    // Create verse item with checkbox, text, and reference
     const verseItem = document.createElement('div');
     verseItem.className = 'verse-item-card';
     verseItem.dataset.verse = verseNum;
@@ -507,13 +477,28 @@ function renderVersesList(verses, chapter) {
     const verseKey = `${state.currentBook}:${chapter}:${verseNum}`;
     const isChecked = state.selectedVerses.has(verseKey);
 
+    let displayText = '';
+    let subText = '';
+
+    if (state.language === 'both' && englishVerses) {
+      const engVerse = englishVerses[idx];
+      const engText = engVerse?.Verse || engVerse?.text || '';
+      displayText = hindiText;
+      subText = engText;
+    } else if (state.language === 'english') {
+      displayText = hindiText;
+    } else {
+      displayText = hindiText;
+    }
+
     verseItem.innerHTML = `
       <label class="verse-checkbox-label">
         <input type="checkbox" class="verse-checkbox" aria-label="Select verse ${verseNum}" ${isChecked ? 'checked' : ''}>
         <span class="checkmark"></span>
       </label>
       <div class="verse-body">
-        <div class="verse-text">${text}</div>
+        <div class="verse-text">${displayText}</div>
+        ${subText ? `<div class="verse-subtext">${subText}</div>` : ''}
         <div class="verse-ref">† ${bookName} ${chapter}:${verseNum} †</div>
       </div>
     `;
@@ -522,32 +507,40 @@ function renderVersesList(verses, chapter) {
       verseItem.classList.add('selected');
     }
 
-    // Toggle selection on card click (but not if clicking checkbox label directly)
+    let suppressCheckboxChange = false;
+
+    // Build verse data for both handlers
+    const engText = subText;
+    const bookNameBoth = bookInfo.hindi + ' (' + bookInfo.english + ')';
+    function getVerseData() {
+      const data = {
+        bookNum: state.currentBook,
+        chapter,
+        verseNum,
+        text: hindiText,
+        bookName: state.language === 'both' ? bookNameBoth : bookName,
+      };
+      if (state.language === 'both') {
+        data.hindi = hindiText;
+        data.english = engText;
+      }
+      return data;
+    }
+
     verseItem.addEventListener('click', (e) => {
-      // Don't double-toggle if clicking the checkbox itself
       if (e.target.closest('.verse-checkbox-label')) return;
 
       const checkbox = verseItem.querySelector('.verse-checkbox');
       checkbox.checked = !checkbox.checked;
-      toggleVerseSelection(verseKey, checkbox.checked, verseItem, {
-        bookNum: state.currentBook,
-        chapter,
-        verseNum,
-        text,
-        bookName
-      });
+      suppressCheckboxChange = true;
+      toggleVerseSelection(verseKey, checkbox.checked, verseItem, getVerseData());
+      suppressCheckboxChange = false;
     });
 
-    // Handle checkbox change directly
     const checkbox = verseItem.querySelector('.verse-checkbox');
     checkbox.addEventListener('change', () => {
-      toggleVerseSelection(verseKey, checkbox.checked, verseItem, {
-        bookNum: state.currentBook,
-        chapter,
-        verseNum,
-        text,
-        bookName
-      });
+      if (suppressCheckboxChange) return;
+      toggleVerseSelection(verseKey, checkbox.checked, verseItem, getVerseData());
     });
 
     DOM.versesList.appendChild(verseItem);
@@ -567,7 +560,6 @@ function toggleVerseSelection(key, isSelected, cardElement, verseData) {
     sendToPresenter({ type: 'REMOVE_VERSE', key: key });
   }
   updateCopyButton();
-  syncPresenterStorage();
   if (state.autoCopy && state.selectedVerses.size > 0) {
     copySelectedVerses();
   }
@@ -581,7 +573,11 @@ function showCopiedCard(selectedVersesMap) {
 
   const crossSymbol = '†';
   const versesContent = Array.from(selectedVersesMap.values()).map(v => {
-    return `${v.text}<br><span class="copied-ref">${crossSymbol} ${v.bookName} ${v.chapter}:${v.verseNum} ${crossSymbol}</span>`;
+    let verseText = v.text;
+    if (state.language === 'both' && v.hindi && v.english) {
+      verseText = v.hindi + '<br><span style="color:var(--text-2);font-size:0.9em">' + v.english + '</span>';
+    }
+    return `${verseText}<br><span class="copied-ref">${crossSymbol} ${v.bookName} ${v.chapter}:${v.verseNum} ${crossSymbol}</span>`;
   }).join('<br><br>');
 
   DOM.copiedCard.innerHTML = `<div class="copied-verse-text">${versesContent}</div>`;
@@ -603,20 +599,31 @@ function selectAllVerses() {
     const bookNum = parseInt(item.dataset.book);
     const chapter = parseInt(item.dataset.chapter);
     const verseKey = `${bookNum}:${chapter}:${verseNum}`;
-    const text = item.querySelector('.verse-text')?.textContent || '';
+    const hindiText = item.querySelector('.verse-text')?.textContent || '';
+    const engText = item.querySelector('.verse-subtext')?.textContent || '';
     const testament = bookNum <= 39 ? 'old' : 'new';
     const books = BOOKS_BY_TESTAMENT[testament];
     const bookInfo = books.find(b => b.number === bookNum);
     const bookName = state.language === 'english' ? bookInfo.english : bookInfo.hindi;
+    const bookNameBoth = bookInfo.hindi + ' (' + bookInfo.english + ')';
 
-    state.selectedVerses.set(verseKey, { bookNum, chapter, verseNum, text, bookName });
+    const data = {
+      bookNum, chapter, verseNum,
+      text: hindiText,
+      bookName: state.language === 'both' ? bookNameBoth : bookName,
+    };
+    if (state.language === 'both') {
+      data.hindi = hindiText;
+      data.english = engText;
+    }
+
+    state.selectedVerses.set(verseKey, data);
     item.classList.add('selected');
     const checkbox = item.querySelector('.verse-checkbox');
     if (checkbox) checkbox.checked = true;
   });
   updateCopyButton();
   sendToPresenter({ type: 'SYNC_VERSES', verses: Array.from(state.selectedVerses.values()) });
-  syncPresenterStorage();
   if (state.autoCopy && state.selectedVerses.size > 0) {
     copySelectedVerses();
   }
@@ -633,7 +640,6 @@ function clearAllVerses() {
   DOM.copiedCardSection.hidden = true;
   updateCopyButton();
   sendToPresenter({ type: 'CLEAR_VERSES' });
-  syncPresenterStorage();
 }
 
 async function copySelectedVerses() {
@@ -642,9 +648,12 @@ async function copySelectedVerses() {
   const lines = [];
   const crossSymbol = '†';
 
-  // Build clipboard text from selected verses map
   state.selectedVerses.forEach((v) => {
-    lines.push(`${v.text}\n${crossSymbol} ${v.bookName} ${v.chapter}:${v.verseNum} ${crossSymbol}`);
+    let verseText = v.text;
+    if (state.language === 'both' && v.hindi && v.english) {
+      verseText = v.hindi + '\n' + v.english;
+    }
+    lines.push(`${verseText}\n${crossSymbol} ${v.bookName} ${v.chapter}:${v.verseNum} ${crossSymbol}`);
   });
 
   const clipboardText = lines.join('\n\n');
@@ -652,14 +661,10 @@ async function copySelectedVerses() {
   try {
     await navigator.clipboard.writeText(clipboardText);
     flashBadge();
-
-    // Show copied card with selected verses
     showCopiedCard(state.selectedVerses);
 
-    // Use language-specific reference for history
-    const refLabel = state.language === 'english' ? 'verses' : 'आयतें';
+    const refLabel = state.language === 'english' ? 'verses' : state.language === 'both' ? 'verses' : 'आयतें';
 
-    // Group verses by book:chapter for history display
     const groups = new Map();
     state.selectedVerses.forEach((v) => {
       const groupKey = `${v.bookNum}:${v.chapter}`;
@@ -669,7 +674,6 @@ async function copySelectedVerses() {
       groups.get(groupKey).count++;
     });
 
-    // Add each group to history
     groups.forEach((g, groupKey) => {
       const historyRef = `${g.bookName} ${g.chapter} (${g.count} ${refLabel})`;
       addToHistory(groupKey, historyRef);
@@ -686,11 +690,11 @@ function addToHistory(reference, hindiRef) {
     hindiRef,
     timestamp: Date.now(),
   });
-  
+
   if (state.history.length > CONFIG.MAX_HISTORY) {
     state.history.length = CONFIG.MAX_HISTORY;
   }
-  
+
   saveState();
   renderHistory();
 }
@@ -701,7 +705,6 @@ function addToHistory(reference, hindiRef) {
    ═══════════════════════════════════════════════════════════ */
 
 function bindEvents() {
-  // Testament dropdown
   DOM.testamentSelect.addEventListener('change', (e) => {
     if (e.target.value) {
       populateBookDropdown(e.target.value);
@@ -713,13 +716,11 @@ function bindEvents() {
       DOM.versesSection.hidden = true;
     }
   });
-  
-  // Book dropdown
+
   DOM.bookSelect.addEventListener('change', (e) => {
     const bookNumber = parseInt(e.target.value);
     if (bookNumber) {
-      state.currentBook = bookNumber;  // ← ADD THIS LINE
-      console.log('📖 Book selected:', bookNumber);
+      state.currentBook = bookNumber;
       populateChapterDropdown(bookNumber);
     } else {
       DOM.chapterSelect.innerHTML = '<option value="">Select Book First</option>';
@@ -727,158 +728,60 @@ function bindEvents() {
       DOM.versesSection.hidden = true;
     }
   });
-  
-  // Chapter dropdown
+
   DOM.chapterSelect.addEventListener('change', (e) => {
     const chapter = parseInt(e.target.value);
-    console.log('📖 Chapter selected:', chapter, 'book:', state.currentBook);
     if (chapter && state.currentBook) {
       showVerses(state.currentBook, chapter);
     } else {
-      console.log('📖 No book selected or chapter invalid');
       DOM.versesSection.hidden = true;
     }
   });
-  
-  // Select All / Clear All
+
   DOM.selectAllBtn.addEventListener('click', selectAllVerses);
   DOM.clearAllBtn.addEventListener('click', clearAllVerses);
-  
-  // Copy Selected
   DOM.copySelectedBtn.addEventListener('click', copySelectedVerses);
-  
-  // Theme toggle
+
   DOM.themeToggle.addEventListener('click', () => {
     state.darkMode = !state.darkMode;
     applyTheme();
     saveState();
   });
-  
-  // Auto-copy toggle (now just for selection only)
+
   DOM.autoCopyTgl.addEventListener('click', () => {
     state.autoCopy = !state.autoCopy;
     applyAutoCopyToggle();
     saveState();
   });
 
-  // Language toggle
   DOM.languageToggle.addEventListener('click', async () => {
-    state.language = state.language === 'hindi' ? 'english' : 'hindi';
+    if (state.language === 'hindi') {
+      state.language = 'english';
+    } else if (state.language === 'english') {
+      state.language = 'both';
+    } else {
+      state.language = 'hindi';
+    }
     applyLanguageToggle();
-    // Clear cached Bible data and reload
     state.bibleData = null;
+    state.hindiBibleData = null;
+    state.englishBibleData = null;
     state.currentVerses = [];
     state.selectedVerses.clear();
     DOM.versesSection.hidden = true;
     sendToPresenter({ type: 'CLEAR_VERSES' });
-    syncPresenterStorage();
     await loadLocalBible();
-    // Refresh dropdown if a testament is selected
     if (DOM.testamentSelect.value) {
       populateBookDropdown(DOM.testamentSelect.value);
     }
     saveState();
   });
 
-  // Present button — builds verse data with both languages and opens presentation
-  async function handlePresent() {
-    if (state.selectedVerses.size === 0) {
-      flashBadge();
-      DOM.badgeCopied.textContent = '⚠ Select verses first!';
-      DOM.badgeCopied.classList.add('show');
-      setTimeout(() => {
-        DOM.badgeCopied.classList.remove('show');
-        DOM.badgeCopied.textContent = '✓ Copied!';
-      }, 2000);
-      return;
-    }
-
-    // Load both bible JSONs to get both languages for each verse
-    let hindiBible = null;
-    let englishBible = null;
-    try {
-      const [hRes, eRes] = await Promise.all([
-        fetch(CONFIG.HINDI_BIBLE_PATH),
-        fetch(CONFIG.ENGLISH_BIBLE_PATH),
-      ]);
-      if (hRes.ok) hindiBible = await hRes.json();
-      if (eRes.ok) englishBible = await eRes.json();
-    } catch (e) {
-      console.warn('Could not load both bible JSONs for present:', e);
-    }
-
-    const verses = Array.from(state.selectedVerses.values());
-    const presentData = {
-      theme: state.presentTheme || 'warm-paper',
-      displayMode: state.presentDisplayMode || 'toggle',
-      verses: verses.map(v => {
-        let englishText = '';
-        let hindiText = '';
-
-        // Get English text from english bible
-        if (englishBible && englishBible.Book) {
-          const book = englishBible.Book[v.bookNum - 1];
-          if (book && book.Chapter && book.Chapter[v.chapter - 1]) {
-            const ch = book.Chapter[v.chapter - 1];
-            if (ch.Verse) {
-              const verse = ch.Verse.find(verse => {
-                const vid = verse.Verseid || verse.verseid || 0;
-                return (vid % 1000) === v.verseNum;
-              });
-              if (verse) englishText = verse.Verse || verse.verse || '';
-            }
-          }
-        }
-
-        // Get Hindi text from hindi bible
-        if (hindiBible && hindiBible.Book) {
-          const book = hindiBible.Book[v.bookNum - 1];
-          if (book && book.Chapter && book.Chapter[v.chapter - 1]) {
-            const ch = book.Chapter[v.chapter - 1];
-            if (ch.Verse) {
-              const verse = ch.Verse.find(verse => {
-                const vid = verse.Verseid || verse.verseid || 0;
-                return (vid % 1000) === v.verseNum;
-              });
-              if (verse) hindiText = verse.Verse || verse.verse || '';
-            }
-          }
-        }
-
-        // Fallback: use the text we already have from the loaded language
-        if (!englishText && !hindiText) {
-          if (state.language === 'english') englishText = v.text;
-          else hindiText = v.text;
-        }
-
-        return {
-          id: `v${v.verseNum}`,
-          reference: `${v.bookName} ${v.chapter}:${v.verseNum}`,
-          english: englishText,
-          hindi: hindiText,
-        };
-      }),
-    };
-
-    function openPresentTab() {
-      openPresenterTab();
-    }
-
-    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.set({ bibleflow_present_data: presentData }, openPresentTab);
-    } else {
-      openPresentTab();
-    }
-  }
-
-  DOM.presentBtn.addEventListener('click', handlePresent);
-  if (DOM.presentSelectedBtn) {
-    DOM.presentSelectedBtn.addEventListener('click', handlePresent);
-  }
-
-  // Open Presenter Tab
+  // Open Presenter Tab button
   if (DOM.openPresenterBtn) {
-    DOM.openPresenterBtn.addEventListener('click', openPresenterTab);
+    DOM.openPresenterBtn.addEventListener('click', () => {
+      sendToPresenter({ type: 'OPEN_PRESENTER' });
+    });
   }
 
   // Settings
@@ -899,7 +802,7 @@ function bindEvents() {
     state.presentDisplayMode = e.target.value;
     saveState();
   });
-  
+
   // History click
   DOM.historyList.addEventListener('click', (e) => {
     const item = e.target.closest('.history-item');
@@ -907,16 +810,14 @@ function bindEvents() {
       const index = parseInt(item.dataset.index);
       const entry = state.history[index];
       if (entry) {
-        // Parse reference like "43:3" (book:chapter)
         const [bookNum, chapter] = entry.reference.split(':').map(Number);
-        
-        // Set dropdowns
+
         const testament = bookNum <= 39 ? 'old' : 'new';
         DOM.testamentSelect.value = testament;
         populateBookDropdown(testament);
         DOM.bookSelect.value = bookNum;
         populateChapterDropdown(bookNum);
-        
+
         setTimeout(() => {
           DOM.chapterSelect.value = chapter;
           showVerses(bookNum, chapter);
@@ -924,7 +825,7 @@ function bindEvents() {
       }
     }
   });
-  
+
   // Clear history
   DOM.clearHistoryBtn.addEventListener('click', () => {
     state.history = [];
@@ -939,27 +840,45 @@ function bindEvents() {
    ═══════════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Load saved state
+  const overlay = document.getElementById('loading-overlay');
+  const retryBtn = document.getElementById('loading-retry-btn');
+
+  function hideOverlay() {
+    if (!overlay) return;
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.3s';
+    setTimeout(() => overlay.remove(), 350);
+  }
+
+  function showError(msg) {
+    if (!overlay) return;
+    overlay.classList.add('error');
+    const msgEl = overlay.querySelector('.msg');
+    if (msgEl) msgEl.textContent = msg || 'Failed to load. Click Retry.';
+  }
+
+  if (retryBtn) retryBtn.addEventListener('click', () => location.reload());
+
+  const failTimer = setTimeout(() => showError('Failed to load. Click Retry.'), 8000);
+
   loadState();
-  
-  // Apply UI state
+
   applyTheme();
   applyAutoCopyToggle();
   applyLanguageToggle();
   renderHistory();
 
-  // Apply settings panel values
   DOM.presentThemeSelect.value = state.presentTheme;
   DOM.presentDisplaySelect.value = state.presentDisplayMode;
-  
-  // Bind events
+
   bindEvents();
-  
-  // Initialize dropdowns
+
   populateTestamentDropdown();
-  
-  // Load Bible data in background
+
   await loadLocalBible();
-  
-  console.log('✝ Bible Flow v2.2 ready');
+
+  clearTimeout(failTimer);
+  hideOverlay();
+
+  console.log('✝ Bible Flow Control Window v5.0 ready');
 });

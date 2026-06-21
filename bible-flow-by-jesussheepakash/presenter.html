@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bible Flow — Presenter</title>
+  <link rel="stylesheet" href="presenter.css">
+</head>
+<body>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar" id="toolbar">
+    <div class="toolbar-left">
+      <button class="tb-btn sidebar-toggle" id="btn-toggle-sidebar" title="Toggle Sidebar (B)">☰</button>
+      <span class="toolbar-brand">✝ Bible Flow Presenter</span>
+      <span class="toolbar-sep">|</span>
+      <span class="verse-count" id="verse-count">0 verses</span>
+    </div>
+    <div class="toolbar-center">
+      <!-- Navigation -->
+      <div class="nav-group" id="nav-group">
+        <button class="tb-btn nav-btn" id="btn-prev" title="Previous Verse (Left Arrow)">◂ Prev</button>
+        <span class="nav-label" id="nav-label">1 / 1</span>
+        <button class="tb-btn nav-btn" id="btn-next" title="Next Verse (Right Arrow)">Next ▸</button>
+      </div>
+      <span class="toolbar-sep">|</span>
+      <!-- Highlight -->
+      <button class="tb-btn" id="btn-highlight" title="Highlight Verse Text">🖍 Highlight</button>
+      <div class="highlight-colors" id="highlight-colors">
+        <button class="hl-swatch active" data-hl="#FFEB3B" style="background:#FFEB3B" title="Yellow"></button>
+        <button class="hl-swatch" data-hl="#4CAF50" style="background:#4CAF50" title="Green"></button>
+        <button class="hl-swatch" data-hl="#2196F3" style="background:#2196F3" title="Blue"></button>
+        <button class="hl-swatch" data-hl="#FF5722" style="background:#FF5722" title="Orange"></button>
+        <button class="hl-swatch" data-hl="#E91E63" style="background:#E91E63" title="Pink"></button>
+      </div>
+      <span class="toolbar-sep">|</span>
+      <!-- Draw tools -->
+      <button class="tb-btn" id="btn-draw-mode" title="Toggle Draw Mode (D)">
+        <span class="tb-icon">✏</span> Draw
+      </button>
+      <div class="tool-group" id="tool-group">
+        <button class="tb-btn tool-btn active" id="btn-pen" title="Pen (1)">Pen</button>
+        <button class="tb-btn tool-btn" id="btn-highlighter" title="Highlighter (2)">High</button>
+        <button class="tb-btn tool-btn" id="btn-eraser" title="Eraser (3)">Erase</button>
+        <button class="tb-btn tool-btn" id="btn-text-tool" title="Text Tool (4)">Text</button>
+        <button class="tb-btn tool-btn" id="btn-rect" title="Rectangle (5)">Rect</button>
+        <button class="tb-btn tool-btn" id="btn-line" title="Line (6)">Line</button>
+        <button class="tb-btn tool-btn" id="btn-move" title="Move Tool (7 or M)">Move</button>
+      </div>
+      <div class="color-swatches" id="color-swatches">
+        <button class="swatch active" data-color="#FFD700" style="background:#FFD700" title="Gold"></button>
+        <button class="swatch" data-color="#FF4444" style="background:#FF4444" title="Red"></button>
+        <button class="swatch" data-color="#FFFFFF" style="background:#FFFFFF" title="White"></button>
+        <button class="swatch" data-color="#4CAF50" style="background:#4CAF50" title="Green"></button>
+        <button class="swatch" data-color="#2196F3" style="background:#2196F3" title="Blue"></button>
+      </div>
+      <button class="tb-btn" id="btn-clear-drawing" title="Clear Drawing">Clear Draw</button>
+      <span class="toolbar-sep">|</span>
+      <button class="tb-btn" id="btn-capture" title="Capture as PNG (C)">Capture</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="tb-btn danger" id="btn-remove-verse" title="Remove Current Verse (Delete)">Remove</button>
+      <button class="tb-btn danger" id="btn-clear-all" title="Clear All Verses">Clear All</button>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+
+    <!-- VERSE QUEUE SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">✝ Verse Queue</div>
+      <div class="sidebar-list" id="sidebar-list">
+        <div class="sidebar-empty" id="sidebar-empty">
+          <div class="empty-icon">📖</div>
+          <p>No verses yet.<br>Select verses in the Control Window to begin.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- VERSE DISPLAY AREA -->
+    <div class="display-area" id="display-area">
+      <div class="verse-display" id="verse-display">
+        <div class="verse-placeholder" id="verse-placeholder">
+          <div class="placeholder-cross">✝</div>
+          <p>Select verses in the Control Window to start presenting</p>
+        </div>
+        <div class="verse-content" id="verse-content" style="display:none">
+          <div class="verse-ref" id="verse-ref"></div>
+          <div class="verse-text" id="verse-text"></div>
+          <div class="verse-hindi" id="verse-hindi"></div>
+        </div>
+      </div>
+      <canvas id="annotation-canvas"></canvas>
+      <!-- Text input overlay for text tool -->
+      <input type="text" id="canvas-text-input" class="canvas-text-input" style="display:none" placeholder="Type text...">
+    </div>
+
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar" id="status-bar">
+    <span id="status-text">Ready</span>
+    <span id="status-draw" class="draw-indicator" style="display:none">DRAW MODE</span>
+  </div>
+
+  <script src="presenter.js"></script>
+</body>
+</html>
